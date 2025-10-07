@@ -12,26 +12,41 @@ try {
     process.exit(1);
   }
 
-  // Track seen bundleIdentifiers
-  const seen = new Set();
-
-  // Filter to keep only unique bundleIdentifiers
+  // Deduplicate apps by bundleIdentifier
+  const seenApps = new Set();
   const dedupedApps = data.apps.filter(app => {
-    if (seen.has(app.bundleIdentifier)) {
-      return false; // duplicate
+    if (seenApps.has(app.bundleIdentifier)) {
+      return false;
     } else {
-      seen.add(app.bundleIdentifier);
-      return true; // first occurrence
+      seenApps.add(app.bundleIdentifier);
+      return true;
     }
   });
 
-  // Replace apps array with deduplicated one
+  // For each app's versions, deduplicate version strings by appending .1, .2, etc.
+  dedupedApps.forEach(app => {
+    if (Array.isArray(app.versions)) {
+      const seenVersions = new Map(); // version string -> count
+      app.versions = app.versions.map(versionObj => {
+        let version = versionObj.version;
+        if (seenVersions.has(version)) {
+          // Increment count and append to version string for uniqueness
+          const count = seenVersions.get(version) + 1;
+          seenVersions.set(version, count);
+          versionObj.version = `${version}.${count}`;
+        } else {
+          seenVersions.set(version, 0);
+        }
+        return versionObj;
+      });
+    }
+  });
+
   data.apps = dedupedApps;
 
-  // Write back the JSON with pretty formatting
+  // Write back formatted JSON
   fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf-8');
-
-  console.log('Duplicates removed successfully.');
+  console.log('Duplicates removed and versions uniquified successfully.');
 
 } catch (error) {
   console.error('Error processing JSON file:', error);
