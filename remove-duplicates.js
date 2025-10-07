@@ -3,7 +3,6 @@ const fs = require('fs');
 const filePath = './repo.altstore.json';
 
 try {
-  // Read the JSON file
   const rawData = fs.readFileSync(filePath, 'utf-8');
   const data = JSON.parse(rawData);
 
@@ -23,17 +22,23 @@ try {
     }
   });
 
-  // For each app's versions, deduplicate version strings by appending .1, .2, etc.
+  // Function to get letter suffix from count: 1 -> a, 2 -> b, 3 -> c ...
+  function getLetterSuffix(count) {
+    const letters = 'abcdefghijklmnopqrstuvwxyz';
+    return letters[count - 1] || ''; // fallback empty string if count > 26
+  }
+
+  // For each app, uniquify versions by appending letters on duplicates
   dedupedApps.forEach(app => {
     if (Array.isArray(app.versions)) {
-      const seenVersions = new Map(); // version string -> count
+      const seenVersions = new Map();
       app.versions = app.versions.map(versionObj => {
         let version = versionObj.version;
         if (seenVersions.has(version)) {
-          // Increment count and append to version string for uniqueness
           const count = seenVersions.get(version) + 1;
           seenVersions.set(version, count);
-          versionObj.version = `${version}.${count}`;
+          const suffix = getLetterSuffix(count);
+          versionObj.version = `${version}${suffix}`;
         } else {
           seenVersions.set(version, 0);
         }
@@ -44,9 +49,8 @@ try {
 
   data.apps = dedupedApps;
 
-  // Write back formatted JSON
   fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf-8');
-  console.log('Duplicates removed and versions uniquified successfully.');
+  console.log('Duplicates removed and versions uniquified with letters.');
 
 } catch (error) {
   console.error('Error processing JSON file:', error);
