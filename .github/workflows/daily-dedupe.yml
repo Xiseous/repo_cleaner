@@ -1,4 +1,4 @@
-name: Daily JSON Deduplication
+name: Daily JSON Deduplication with Archive
 
 on:
   schedule:
@@ -15,7 +15,10 @@ jobs:
 
       - name: Download JSON file
         run: |
-          curl -o repo.altstore.json https://aio.zxcvbn.fyi/r/repo.altstore.json
+          TIMESTAMP=$(date -u +"%Y-%m-%dT%H-%M-%SZ")
+          mkdir -p archive
+          curl -o "archive/repo.altstore_${TIMESTAMP}.json" https://aio.zxcvbn.fyi/r/repo.altstore.json
+          cp "archive/repo.altstore_${TIMESTAMP}.json" repo.altstore.json
 
       - name: Setup Node.js
         uses: actions/setup-node@v3
@@ -33,8 +36,8 @@ jobs:
 
       - name: Commit and push changes
         run: |
-          git add repo.altstore.json
-          git diff-index --quiet HEAD || git commit -m "Daily deduplicate repo.altstore.json"
+          git add repo.altstore.json archive/
+          git diff-index --quiet HEAD || git commit -m "Daily deduplicate and archive repo.altstore.json"
           git push
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
