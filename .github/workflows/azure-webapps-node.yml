@@ -1,0 +1,40 @@
+name: Daily JSON Deduplication
+
+on:
+  schedule:
+    - cron: '0 0 * * *'  # daily midnight UTC
+  workflow_dispatch:
+
+jobs:
+  dedupe-json:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Download JSON file
+        run: |
+          curl -o repo.altstore.json https://aio.zxcvbn.fyi/r/repo.altstore.json
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Remove duplicates from JSON
+        run: |
+          node remove-duplicates.js
+
+      - name: Configure Git user
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+
+      - name: Commit and push changes
+        run: |
+          git add repo.altstore.json
+          git diff-index --quiet HEAD || git commit -m "Daily deduplicate repo.altstore.json"
+          git push
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
